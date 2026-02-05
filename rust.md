@@ -41,6 +41,11 @@
 - **Always** import types or functions at the very top of the module, with the one exception being `cfg()`-gated functions. Never import types or modules within function contexts, other than this `cfg()`-gated exception.
 - It is okay to import enum variants for pattern matching, though.
 
+Within each module, organize code as follows:
+1. **Public API first** - all `pub` structs, enums, and functions at the top
+2. **Private implementation below** - constants, helper functions, and internal types
+3. **Order by use** - private items should appear in the order they're called/used by the public API (topological order)
+
 ### Memory and performance
 
 - Use `Arc` or borrows for shared immutable data.
@@ -57,4 +62,5 @@
 - **insta**: For snapshot testing.
 - **libtest-mimic**: For custom test harnesses.
 - **pretty_assertions**: For better assertion output.
+
 
