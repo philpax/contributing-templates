@@ -41,14 +41,13 @@ Treat these as the TypeScript analogues of the Rust patterns. The goal is the sa
 - Exceptions are for genuinely exceptional, programmer-error situations.
 - User-facing error messages follow the same rules as the rest of the project: present tense, sentence case, with periods.
 
-### Module organization
+### Module organisation
 
 - Import types and values at the top of the file. No inline `require`/`import()` inside function bodies except for genuinely dynamic imports (code-splitting).
 - Use named exports. Reserve default exports for cases where a framework or tool requires them (e.g. route modules, some bundler entry points).
 - Use function declarations for top-level functions and arrow functions for inline callbacks. Annotate return types explicitly on exported functions, including `Promise<T>`.
-- Keep file layout consistent with the rest of the project: public API first, private helpers below, ordered by use.
-- Keep files under ~400 lines, split by concern rather than arbitrarily at the limit.
-- Group a `lib/` (or equivalent) folder by concern — `api/`, `model/`, `format/`, `nav/` — rather than letting it go flat. A flat folder of 20+ files is a signal that subfolders are needed.
+- The file-size threshold here is around 400 lines.
+- Group a `lib/` (or equivalent) folder by concern — `api/`, `model/`, `format/`, `nav/` — rather than letting it go flat.
 - Use lowerCamelCase filenames for modules that export values and functions.
 
 ### Generated bindings across a language boundary

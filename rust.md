@@ -12,20 +12,19 @@
   - `cargo test --workspace --no-default-features`
 - Use `cargo clippy` in place of `cargo build` — it typechecks and lints in one pass, so a separate build buys nothing.
 - Iterate in debug. Reach for `--release` only when benchmarking or packaging.
+- No `unwrap()` or `expect()` in production code; tests are fine. `unwrap_used` and `expect_used` are allow-by-default restriction lints, so the check commands above request them explicitly — plain `-D warnings` doesn't catch them.
+- Never silence a lint without a concrete reason documented in a comment above it. In almost all cases the right move is to restructure the code.
+- When you do suppress one, prefer `#[expect(...)]` to `#[allow(...)]`. `expect` warns once the suppression is no longer needed, so stale suppressions can't quietly accumulate as the code changes around them.
 
 ### Type system patterns
 
-- **Builder patterns** for complex construction (e.g., `TestRunnerBuilder`)
-- **Type states** encoded in generics when state transitions matter
-- **Lifetimes** used extensively to avoid cloning (e.g., `TestInstance<'a>`)
-- **Restricted visibility**: Use `pub(crate)` and `pub(super)` liberally
-- **Newtypes for domain types**: never a bare `String` or `u32` where the domain has a meaning for it.
+- **Builder patterns** for complex construction (e.g. `TestRunnerBuilder`).
+- **Type states** encoded in generics when state transitions matter.
+- **Lifetimes** used extensively to avoid cloning (e.g. `TestInstance<'a>`).
+- **Newtypes** for domain types, per the general rule against bare primitives.
+- **`#[non_exhaustive]`** on public types in a library crate with a stable API, so a new variant or field isn't a breaking change. Internal crates don't need it.
 - **Parameter structs over long argument lists**: when a function approaches the `clippy::too_many_arguments` threshold, bundle the cohesive parameters into a struct rather than threading more positional arguments. A request struct, or a shared seam like `Engine { store, graph, clock }` that several call shapes pass along.
   - **Never** silence that lint with an `allow`. The lint firing means a struct is wanted. The one exception is a signature you don't own — an FFI shim, or a hook mirroring a foreign ABI — where the `allow` is the honest annotation.
-- **`#[non_exhaustive]`** on public types in a library crate with a stable API, so a new variant or field isn't a breaking change. Internal crates don't need it.
-- More generally, never silence a lint without a concrete reason documented in a comment above it. In almost all cases the right move is to restructure the code.
-- Prefer `#[expect(...)]` to `#[allow(...)]` when you do suppress one. `expect` warns once the suppression is no longer needed, so stale suppressions can't quietly accumulate as the code changes around them.
-- No `unwrap()` or `expect()` in production code; tests are fine. `unwrap_used` and `expect_used` are allow-by-default restriction lints, so the check commands above request them explicitly — plain `-D warnings` does not catch them.
 
 ### Error handling
 
@@ -53,7 +52,7 @@
 - Install the subscriber only in binaries, and send logs to stderr.
 - Operator and diagnostic programs route their output through `tracing` too. Reserve `stdout`/`println!` for genuine machine-readable command output.
 
-### Module organization
+### Module organisation
 
 - Use `mod.rs` files to re-export public items; nontrivial logic lives in submodules, not in `mod.rs` itself.
 - Keep module boundaries strict with restricted visibility, but prefer `pub(crate)` and `pub(super)` over `pub(in <path>)`. The `pub(in …)` form scopes to a named ancestor, which is precise but reads as a smell; reach for it only when neither `pub(crate)` nor `pub(super)` expresses the intended scope.
@@ -66,23 +65,18 @@
 - **Always** anchor intra-crate paths at `crate::`, never `super::`. Write `crate::graph::Graph`, not `super::Graph` or `super::super::Graph`. The one exception is a test module, where `use super::*;` (pulling the parent module into the `#[cfg(test)]` block) is the idiomatic form and stays.
 - Prefer a single grouped `use` statement per crate root rather than several siblings under it, collapsing shared prefixes: `use axum::{extract::State, http::StatusCode, routing::get};`, not three separate lines. Group imports into three blocks separated by blank lines: `std`, external crates, then `crate`/`super`/`self`. `imports_granularity = "Crate"` and `group_imports = "StdExternalCrate"` in `rustfmt.toml` enforce both automatically under nightly rustfmt.
 
-Within each module, organize code as follows:
-1. **Public API first** - all `pub` structs, enums, and functions at the top
-2. **Private implementation below** - constants, helper functions, and internal types
-3. **Order by use** - private items should appear in the order they're called/used by the public API (topological order)
+### Code organisation
 
-### Code organization
+The general code-organisation rules apply; these are the Rust specifics.
 
 - **The file hierarchy is the architecture diagram.** A newcomer should be able to read the directory listing and infer what the project does.
   - A subsystem with a public entry point is a folder module whose `mod.rs` states the boundary, with private submodules inside. Only `lib.rs`, `main.rs`, and genuinely cross-cutting types like `errors.rs` stay as top-level single files.
   - Avoid a top-level single file where a folder grouping is natural. If several files are semantically related, or file A is only consumed by file B, merge them.
-- **Keep files under the size threshold**, around 1000 lines. Split into a folder and re-export the public items from `mod.rs`, so consumers see a stable API.
+- **The file-size threshold is around 1000 lines.** Split into a folder and re-export the public items from `mod.rs`, so consumers see a stable API.
   - Splitting is cheaper than it looks: methods on one type can spread across several `impl` blocks in different files of the same module, so there's no visibility or trait plumbing to do.
   - A large inline `#[cfg(test)] mod tests` counts toward the total. Extracting it to a sibling `tests.rs` is often the whole fix.
   - Existing oversized files are grandfathered. Split one when a change touches it substantially, not in drive-by churn.
-- **Split by concern, not by size alone.** A file should be split along natural seams — distinct data types, feature groups, or functional areas — not arbitrarily at the line limit. A cohesive single-concern file that slightly exceeds the threshold is preferable to a fragmented one.
-- **Organize wide folders into subfolders.** When a folder accumulates many direct children, group them by domain or role. A flat folder of 20+ files is a signal that subfolders are needed.
-- **Test files follow the same threshold.** A long test file is split by concern group, with shared helpers in the test module's `mod.rs`.
+- Shared helpers for a split test module live in its `mod.rs`.
 
 ### Control flow and state machines
 
@@ -94,7 +88,7 @@ Within each module, organize code as follows:
 ### Platform coupling
 
 - A file that depends on platform-specific facilities says so on the first line of its module-level docstring: `//! Linux-only: reads /proc/{pid}/cmdline.` The convention is explicit enough that a port to a second platform — or a reviewer — knows exactly what the contract is.
-- Isolate outside-world coupling behind a small trait (`Fs`, `ProcessSpawner`, `GpuProbe`, `Clock`), bundled into one dependency struct that production and test construct differently. The trait exists so tests can substitute an in-memory or fake implementation; a second OS implementation falls out of the same shape.
+- The outside-world seams take the form of traits — `Fs`, `ProcessSpawner`, `GpuProbe`, `Clock` — bundled into one dependency struct that production and test construct differently. A second OS implementation then falls out of the same shape the fakes already needed.
 - When a second platform does land, gate the existing impl with `#[cfg(target_os = "…")]` and add the alternative under a sibling gate; the trait definition stays platform-neutral.
 
 ### Reaching through smart pointers
@@ -108,6 +102,13 @@ Within each module, organize code as follows:
 - Avoid `#[serde(untagged)]` when deserialising — the error messages it produces are useless. Write a custom visitor instead.
 - Reserve `#[serde(flatten)]` for the case it is genuinely for: extending a shared struct with local fields, or a `toml::Table` catch-all that preserves unknown fields across a round-trip. Note that it interacts badly with `serde_ignored` and with `deny_unknown_fields`.
 
+### Memory and performance
+
+- Be deliberate about when you clone and when you borrow. Share immutable data behind `Arc`/`Rc` or borrow it; where the data has a natural tree or graph shape, share the nodes rather than cloning subtrees.
+- Use `smol_str` for efficient small string storage.
+- Use `smallvec` for collections that are usually small, to avoid heap allocations in the common case.
+- Stream data (e.g. iterators) where possible rather than buffering.
+
 ### Dependency versions
 
 - **Applications, binaries, and workspace-internal crates: pin exactly.** Cargo's default caret range lets resolution drift between `cargo update` runs; `serde = "=1.0.219"` makes a bump a reviewable change instead of an ambient one.
@@ -116,19 +117,11 @@ Within each module, organize code as follows:
 - Check the current version before adding or bumping a crate rather than writing one from memory.
 - Comment on a non-obvious dependency choice, including a feature-flag choice made for a reason.
 
-### Memory and performance
-
-- Use `Arc` or borrows for shared immutable data.
-- Use `smol_str` for efficient small string storage.
-- Use `smallvec` for collections that are usually small, to avoid heap allocations in the common case.
-- Be deliberate about when you clone and when you borrow. Where the data has a natural tree or graph shape, share the nodes behind `Arc`/`Rc` rather than cloning subtrees.
-- Stream data (e.g. iterators) where possible rather than buffering.
-
-## Testing 
+## Testing
 
 ### Testing tools
 
-- **test-case**: For parameterized tests.
+- **test-case**: For parameterised tests.
 - **proptest**: For property-based testing.
 - **insta**: For snapshot testing.
 - **libtest-mimic**: For custom test harnesses.
@@ -140,6 +133,4 @@ Within each module, organize code as follows:
 - Unit tests live in the same file as the code under test, in a `#[cfg(test)] mod tests` block. Integration tests live under `tests/`.
 - Never `#[ignore]` a test, and never let one silently skip. A test that cannot run in an environment is gated by a `cfg` or a feature, so its absence is visible.
 - Tests must be deterministic: no real subprocesses, no real filesystem, no wall-clock sleeps, no network. Route each of those through the seam traits above and substitute the fake. Gate a fake behind `#[cfg(any(test, feature = "test-fakes"))]` when integration tests need it too.
-- Time is the narrow exception when everything already runs on `tokio::time`: `#[tokio::test(start_paused = true)]` plus `tokio::time::advance` gives virtual time without another trait. Prefer that, or waiting on an explicit state predicate, over `sleep`ing to let real time pass.
-
-
+- Time is the narrow exception when everything already runs on `tokio::time`: `#[tokio::test(start_paused = true)]` plus `tokio::time::advance` gives virtual time without needing another seam.

@@ -4,10 +4,12 @@
 
 - Model the full error space—no shortcuts or simplified error handling.
 - Handle all edge cases, including race conditions, signal timing, and platform differences.
-- Use the type system to encode correctness constraints.
+- Use the type system to encode correctness constraints: newtypes, builder patterns, type states, lifetimes. Never use a bare string or integer where the domain has a meaning for it; a recognised closed set of values rides as an enum, not as bare strings.
 - Prefer compile-time guarantees over runtime checks where possible.
+- Use message passing or the actor model to avoid data races in concurrent code.
 - **Never silently drop content you can't represent.** When adapting data between formats, return an error for anything the target can't express. A caller may then choose to ignore it; silent data loss is a correctness bug, not a convenience.
 - Validate at each layer the data crosses, not only where the bug happened to surface. One check is bypassed by the next code path, refactor, or test double; the goal is to make the bad state structurally impossible, not locally absent.
+- Getting the details right is really important!
 
 ### User experience as a primary driver
 
@@ -32,15 +34,12 @@
 - Where the project documents a chosen stack, use it rather than silently introducing an alternative to something already covered.
 - When it's genuinely unclear, ask rather than picking silently. Either direction is cheap to change early and annoying to change late.
 
-### Production-grade engineering
+### Boundaries and compatibility
 
-- Use type system extensively: newtypes, builder patterns, type states, lifetimes. Never use a bare string or integer where the domain has a meaning for it; a recognised closed set of values rides as an enum, not as bare strings.
-- Use message passing or the actor model to avoid data races in concurrent code.
 - A library never reads environment variables. Configuration — keys, URLs, feature flags, paths — arrives as parameters, and only the application entry point reads the environment. Otherwise the library can't be tested without manipulating the environment, and it's silently coupled to a deployment.
 - When changing anything serialised to disk or sent over a wire, walk the whole version matrix: old reader with new data, new reader with old data, and **old writer with new data**.
   - That third case is the one that gets missed. A default lets an old reader parse new data, but an old writer then drops the fields it doesn't know about on write-back — which corrupts the file rather than failing on it.
   - Bump the format version when you add the field, not when you first depend on it.
-- Getting the details right is really important!
 
 ### Functional core, imperative shell
 
@@ -48,7 +47,16 @@
 - The shape is gather, then process, then persist: the shell collects the inputs, the core decides, the shell writes the result. A core function that reaches out to read something mid-decision is the thing this is meant to prevent.
 - Isolate coupling to the outside world — filesystem, clock, network, subprocesses, devices — behind a small seam: a trait, an interface, a dependency struct, with a production implementation and a test fake. Tests are deterministic because they substitute the fake, not because they clean up after the real thing.
 - The payoff is testability. A pure core needs no fakes at all, and a thin shell has little logic left worth mocking. When a test needs elaborate setup to reach the behaviour it's checking, that's usually the code's shape talking, not the test's.
-- Name files for what they hold, not for a category. No `utils`, `helpers`, `common`, or `misc` — they become dumping grounds, and nothing stops unrelated code being added to a file whose name claims nothing. `string-formatting`, `date-arithmetic`, `api-error-handling`: it's hard to put the wrong thing in those.
+
+### Code organisation
+
+The language-specific files set the file-size threshold and the naming conventions; these apply everywhere.
+
+- Name a file for what it holds, not for a category. No `utils`, `helpers`, `common`, or `misc` — they become dumping grounds, and nothing stops unrelated code being added to a file whose name claims nothing. A file named for string formatting, or date arithmetic, or API error handling is one it's hard to put the wrong thing in. (Each language file gives the casing to use.)
+- Within a file, put the public API first, then the private implementation below it: constants, helpers, and internal types. Order the private items by use, so each appears roughly in the order the public API reaches for it (topological order).
+- Split a file along natural seams — distinct data types, feature groups, functional areas — not arbitrarily at the line limit. A cohesive single-concern file that slightly exceeds the threshold beats a fragmented one.
+- Group a wide folder into subfolders by domain or role. A flat folder of 20+ files is a signal that subfolders are wanted.
+- Test files follow the same thresholds as the code they test.
 
 ### Testing
 
