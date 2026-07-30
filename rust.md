@@ -6,8 +6,8 @@
 - Format with **nightly rustfmt**: `cargo +nightly fmt --all`. `rustfmt.toml` opts into `imports_granularity = "Crate"` and `group_imports = "StdExternalCrate"`, which are nightly-only — stable rustfmt prints a warning about each and then silently skips them, so a stable-formatted file is *not* equivalent to a nightly-formatted one.
 - Ensure the following checks pass at the end of each complete task (you do not need to do this for intermediate steps):
   - `cargo +nightly fmt --all -- --check`
-  - `cargo clippy --all-targets --all-features -- -D warnings`
-  - `cargo clippy --all-targets --no-default-features -- -D warnings`
+  - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
+  - `cargo clippy --all-targets --no-default-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
   - `cargo test --workspace`
   - `cargo test --workspace --no-default-features`
 - Use `cargo clippy` in place of `cargo build` — it typechecks and lints in one pass, so a separate build buys nothing.
@@ -22,11 +22,11 @@
 - **Newtypes for domain types**: never a bare `String` or `u32` where the domain has a meaning for it.
 - **Parameter structs over long argument lists**: when a function approaches the `clippy::too_many_arguments` threshold, bundle the cohesive parameters into a struct (a request struct, or a shared seam like `Engine { store, graph, clock }` that several call shapes pass along) rather than threading more positional arguments. **Never** silence the lint with `#[allow(clippy::too_many_arguments)]`; the lint firing means a struct is wanted. The exception is a signature you don't own — an FFI shim or a hook that must mirror a foreign ABI — where the `allow` is the honest annotation.
 - More generally, never use `#[allow(clippy::...)]` to silence a lint without a concrete reason documented in a comment above the allow. In almost all cases the right move is to restructure the code.
-- No `unwrap()` or `expect()` in production code; tests are fine.
+- No `unwrap()` or `expect()` in production code; tests are fine. `unwrap_used` and `expect_used` are allow-by-default restriction lints, so the check commands above request them explicitly — plain `-D warnings` does not catch them.
 
 ### Error handling
 
-- Do not use `thiserror`. Instead, manually implement `std::fmt::Error` for a given error `struct` or `enum`.
+- Do not use `thiserror`. Instead, manually implement `std::fmt::Display` and `std::error::Error` for a given error `struct` or `enum`. `Error::source` returns the wrapped cause where there is one, so the chain stays walkable.
 - Group errors by category with an `ErrorKind` enum when appropriate.
 - Provide rich error context using structured error types.
 - Two-tier error model:
@@ -100,7 +100,7 @@ Within each module, organize code as follows:
 - Use `Arc` or borrows for shared immutable data.
 - Use `smol_str` for efficient small string storage.
 - Use `smallvec` for collections that are usually small, to avoid heap allocations in the common case.
-- Careful attention to cloning referencing. Avoid cloning if code has a natural tree structure.
+- Be deliberate about when you clone and when you borrow. Where the data has a natural tree or graph shape, share the nodes behind `Arc`/`Rc` rather than cloning subtrees.
 - Stream data (e.g. iterators) where possible rather than buffering.
 
 ## Testing 

@@ -31,7 +31,7 @@ Treat these as the TypeScript analogues of the Rust patterns. The goal is the sa
 - **Avoid type assertions** (`as SomeType`) and non-null assertions (`!`). Use type guards, discriminated unions, or restructured code instead. A type assertion is a claim the compiler cannot verify, so it is a liability.
 - **Validate at boundaries**. Data from the network, `localStorage`, URL parameters, or any other untyped source must be parsed and validated before being treated as typed. Do not trust a `JSON.parse` result.
 - Use `type` for object shapes rather than `interface`. Reserve `interface` for the cases that need declaration merging or a framework convention that expects it.
-- Use `null` for an absent value, not `undefined`, so the absence is explicit and survives serialisation.
+- Be consistent about which of `null` and `undefined` means "absent", and convert at the boundary rather than letting both flow through the same field. `undefined` is the ecosystem default (`field?: T`, optional props, default parameters); prefer it unless a wire format or a backend makes `null` the natural choice.
 
 ### Errors
 
