@@ -4,7 +4,7 @@
 
 - Use Rust 2024 edition.
 - Format with **nightly rustfmt**: `cargo +nightly fmt --all`. `rustfmt.toml` opts into `imports_granularity = "Crate"` and `group_imports = "StdExternalCrate"`, which are nightly-only — stable rustfmt prints a warning about each and then silently skips them, so a stable-formatted file is *not* equivalent to a nightly-formatted one.
-- Ensure the following checks pass at the end of each complete task (you do not need to do this for intermediate steps):
+- Ensure the following checks pass at the end of each complete task (you don't need to do this for intermediate steps):
   - `cargo +nightly fmt --all -- --check`
   - `cargo clippy --all-targets --all-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
   - `cargo clippy --all-targets --no-default-features -- -D warnings -W clippy::unwrap_used -W clippy::expect_used`
@@ -20,7 +20,8 @@
 - **Lifetimes** used extensively to avoid cloning (e.g., `TestInstance<'a>`)
 - **Restricted visibility**: Use `pub(crate)` and `pub(super)` liberally
 - **Newtypes for domain types**: never a bare `String` or `u32` where the domain has a meaning for it.
-- **Parameter structs over long argument lists**: when a function approaches the `clippy::too_many_arguments` threshold, bundle the cohesive parameters into a struct (a request struct, or a shared seam like `Engine { store, graph, clock }` that several call shapes pass along) rather than threading more positional arguments. **Never** silence the lint with `#[allow(clippy::too_many_arguments)]`; the lint firing means a struct is wanted. The exception is a signature you don't own — an FFI shim or a hook that must mirror a foreign ABI — where the `allow` is the honest annotation.
+- **Parameter structs over long argument lists**: when a function approaches the `clippy::too_many_arguments` threshold, bundle the cohesive parameters into a struct rather than threading more positional arguments. A request struct, or a shared seam like `Engine { store, graph, clock }` that several call shapes pass along.
+  - **Never** silence that lint with an `allow`. The lint firing means a struct is wanted. The one exception is a signature you don't own — an FFI shim, or a hook mirroring a foreign ABI — where the `allow` is the honest annotation.
 - More generally, never use `#[allow(clippy::...)]` to silence a lint without a concrete reason documented in a comment above the allow. In almost all cases the right move is to restructure the code.
 - No `unwrap()` or `expect()` in production code; tests are fine. `unwrap_used` and `expect_used` are allow-by-default restriction lints, so the check commands above request them explicitly — plain `-D warnings` does not catch them.
 
@@ -32,7 +33,9 @@
 - Two-tier error model:
   - `ExpectedError`: User/external errors with semantic exit codes.
   - Internal errors: Programming errors that may panic or use internal error types.
-- Every error's `Display` leads with a `<context>:` prefix naming the subsystem or operation it belongs to (e.g. `event store: …`, `lua: block commit failed: …`, `could not open the event log at /path: …`), then the cause. Aggregating errors prefix their own layer's context and delegate the inner error, so a chained error reads as nested context (`turn: lua: block commit failed: event store: …`). Add resource context like a path at the layer that has it. Avoid bare "failed to {x}" glue.
+- Every error's `Display` leads with a `<context>:` prefix naming the subsystem or operation it belongs to, then the cause: `event store: …`, `lua: block commit failed: …`, `could not open the event log at /path: …`. Messages stay lowercase, so they compose.
+  - An aggregating error prefixes its own layer's context and delegates to the inner error. A chained error then reads as nested context: `turn: lua: block commit failed: event store: …`.
+  - Add resource context — a path, an id — at the layer that has it. Avoid bare "failed to {x}" glue; name the operation instead.
 
 ### Async patterns
 
@@ -55,7 +58,9 @@
 - Use `#[cfg(unix)]` and `#[cfg(windows)]` for conditional compilation.
 - **Always** import types or functions at the very top of the module, with the one exception being `cfg()`-gated functions. Never import types or modules within function contexts, other than this `cfg()`-gated exception.
 - It is okay to import enum variants for pattern matching, though.
-- When a path is used more than once in a module, import it at the top of the module (the specific items, not the module) rather than repeating the fully-qualified path at each call site. A path used only once may stay fully-qualified — unless it is unwieldy (more than three module segments deep), in which case import it regardless of use count. And when the module already imports a sibling from the same parent, import the new item alongside it rather than writing it inline.
+- A path used more than once in a module gets imported at the top — the specific items, not the module — rather than repeated in full at each call site.
+  - A path used once may stay fully-qualified. Unless it's unwieldy, meaning more than three module segments deep, in which case import it anyway.
+  - And when the module already imports a sibling from the same parent, import the new item alongside it rather than writing it inline.
 - **Always** anchor intra-crate paths at `crate::`, never `super::`. Write `crate::graph::Graph`, not `super::Graph` or `super::super::Graph`. The one exception is a test module, where `use super::*;` (pulling the parent module into the `#[cfg(test)]` block) is the idiomatic form and stays.
 - Prefer a single grouped `use` statement per crate root rather than several siblings under it, collapsing shared prefixes: `use axum::{extract::State, http::StatusCode, routing::get};`, not three separate lines. Group imports into three blocks separated by blank lines: `std`, external crates, then `crate`/`super`/`self`. `imports_granularity = "Crate"` and `group_imports = "StdExternalCrate"` in `rustfmt.toml` enforce both automatically under nightly rustfmt.
 
@@ -66,8 +71,13 @@ Within each module, organize code as follows:
 
 ### Code organization
 
-- **The file hierarchy is the architecture diagram.** A newcomer should be able to intuit what the project does by reading the directory listing. Subsystems with public entry points live as folder modules whose `mod.rs` states the boundary, with private submodules inside; only `lib.rs`, `main.rs`, and genuinely cross-cutting types (e.g. `errors.rs`) stay as top-level single files. Avoid a top-level single-file module where a natural folder grouping exists — if several files are semantically related, or file A is only consumed by file B, merge into a folder module or into the consumer.
-- **Keep files under the size threshold.** Split a file into multiple files within a folder when it exceeds ~1000 lines, re-exporting the public items from `mod.rs` so consumers see a stable API. Methods on one type can be spread across several `impl` blocks in different files of the same module, so no visibility or trait plumbing is needed. A large inline `#[cfg(test)] mod tests` counts toward the total — extracting it to a sibling `tests.rs` is often the whole fix. Existing oversized files are grandfathered: split them when a change touches them substantially, not in drive-by churn.
+- **The file hierarchy is the architecture diagram.** A newcomer should be able to read the directory listing and infer what the project does.
+  - A subsystem with a public entry point is a folder module whose `mod.rs` states the boundary, with private submodules inside. Only `lib.rs`, `main.rs`, and genuinely cross-cutting types like `errors.rs` stay as top-level single files.
+  - Avoid a top-level single file where a folder grouping is natural. If several files are semantically related, or file A is only consumed by file B, merge them.
+- **Keep files under the size threshold**, around 1000 lines. Split into a folder and re-export the public items from `mod.rs`, so consumers see a stable API.
+  - Splitting is cheaper than it looks: methods on one type can spread across several `impl` blocks in different files of the same module, so there's no visibility or trait plumbing to do.
+  - A large inline `#[cfg(test)] mod tests` counts toward the total. Extracting it to a sibling `tests.rs` is often the whole fix.
+  - Existing oversized files are grandfathered. Split one when a change touches it substantially, not in drive-by churn.
 - **Split by concern, not by size alone.** A file should be split along natural seams — distinct data types, feature groups, or functional areas — not arbitrarily at the line limit. A cohesive single-concern file that slightly exceeds the threshold is preferable to a fragmented one.
 - **Organize wide folders into subfolders.** When a folder accumulates many direct children, group them by domain or role. A flat folder of 20+ files is a signal that subfolders are needed.
 - **Test files follow the same threshold.** A long test file is split by concern group, with shared helpers in the test module's `mod.rs`.

@@ -47,7 +47,8 @@
 - Don't add narrative comments in function bodies. Only add a comment if what you're doing is non-obvious or special in some way, or if something needs a deeper "why" explanation.
 - Module-level documentation should explain purpose and responsibilities.
 - Comments and docs describe the present state. Reserve past-tense narration for the rare case where history explains a standing "why".
-- Keep the user-facing docs in sync with the code. Where a document restates something the code owns — a config default, an example config file, a generated reference, an API surface — name the code as the source of truth, and update the document in the same change. Treat a code change that lands without its doc update as incomplete, and prefer generating the document from the code (with a `--check` mode in CI) over trusting anyone to remember.
+- Keep the user-facing docs in sync with the code. Where a document restates something the code owns — a config default, an example config file, a generated reference, an API surface — name the code as the source of truth and update the document in the same change. A code change that lands without its doc update isn't finished.
+- Better still, generate the document from the code and check it in CI. Don't rely on anyone remembering.
 - **Always** use periods at the end of code comments.
 - **Never** use title case in headings and titles. Always use sentence case.
 - Always use the Oxford comma.

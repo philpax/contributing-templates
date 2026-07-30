@@ -51,9 +51,11 @@ Treat these as the TypeScript analogues of the Rust patterns. The goal is the sa
 
 ### Generated bindings across a language boundary
 
-Where the frontend talks to a backend in another language, that backend is the source of truth for the wire contract, and the TypeScript side of it is generated — never hand-edited, and generally not committed. Wire the generation into the backend's own build so it cannot go stale, and have CI run that build before the frontend checks, so a change to a wire type is validated in the same commit. Lint and format skip the generated directories.
+Where the frontend talks to a backend in another language, that backend owns the wire contract. The TypeScript side of it is generated — never hand-edited, and generally not committed.
 
-Regenerating makes new fields *typed*; it does not make them *visible*. When a backend change adds or restructures state that the frontend displays, update the display code in the same change — a field that arrives typed but unrendered is a gap, where the UI shows stale behaviour while the backend has moved on.
+Wire the generation into the backend's own build so it can't go stale, and have CI run that build before the frontend checks. A change to a wire type is then validated in the same commit that makes it. Lint and format skip the generated directories.
+
+Regenerating makes new fields *typed*; it doesn't make them *visible*. When a backend change adds or restructures state that the frontend displays, update the display code in the same change — a field that arrives typed but unrendered is a gap, where the UI shows stale behaviour while the backend has moved on.
 
 ### Testing tools
 
