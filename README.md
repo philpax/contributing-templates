@@ -2,7 +2,15 @@
 
 Inspiration for `CONTRIBUTING.md` files for my own projects, which should serve as guidelines for humans and agents alike.
 
-The intended use is to initialise the `CONTRIBUTING.md` for a given project using a combination of `general.md` and a language-specific file.
+The intended use is to initialise the `CONTRIBUTING.md` for a given project by combining `general.md` with whichever of the other files apply:
+
+- `general.md` — language-agnostic conventions. Always.
+- `rust.md`, `typescript.md` — per language.
+- `react.md`, `tailwind.md` — per library, on top of `typescript.md`. Only include one if the project actually uses it; a plain TypeScript project takes neither.
+
+So a Rust daemon with a React + Tailwind frontend takes all five, and a Rust CLI takes two.
+
+These are a starting point, not a standard. Every project that uses them ends up amending its copy with project-specific detail, and diverging where the project's needs differ; the templates aren't a source of truth to sync back to. The reverse direction is worth doing periodically, though: when several projects independently arrive at the same rule, it belongs here.
 
 As per [Coding Agents Are Easy, Actually](https://karashiiro.leaflet.pub/3mbfapvdvss2b), this explicitly targets `CONTRIBUTING.md`, and not `AGENTS.md`; humans need the same kind of documentation!
 
