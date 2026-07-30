@@ -19,6 +19,15 @@
 - "Not overly generic"—prefer specific, composable logic over abstract frameworks.
 - Evolve the design incrementally rather than attempting perfect upfront architecture.
 
+### Dependencies
+
+- Neither reflex is right: reaching for a dependency for something trivial and handrolling something with a long correctness tail are both mistakes, and the second is the more expensive one.
+- Handroll it when it's small, self-contained, and you can see the whole problem — a builder, a wrapper, a couple of pure functions.
+- Take the dependency when the problem has a tail you'd otherwise discover in production: dates and timezones, Unicode, text encodings, compression, TLS, anything cryptographic. Never handroll cryptography.
+- Prefer an existing dependency (including one of its feature flags) over a new one, and a focused library over a framework you'd use 5% of.
+- Where the project documents a chosen stack, use it rather than silently introducing an alternative to something already covered.
+- When it's genuinely unclear, ask rather than picking silently. Either direction is cheap to change early and annoying to change late.
+
 ### Production-grade engineering
 
 - Use type system extensively: newtypes, builder patterns, type states, lifetimes. Never use a bare string or integer where the domain has a meaning for it; a recognised closed set of values rides as an enum, not as bare strings.
