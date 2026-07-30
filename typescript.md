@@ -31,6 +31,8 @@ Treat these as the TypeScript analogues of the Rust patterns. The goal is the sa
 - **Avoid type assertions** (`as SomeType`) and non-null assertions (`!`). Use type guards, discriminated unions, or restructured code instead. A type assertion is a claim the compiler cannot verify, so it is a liability.
 - **Validate at boundaries**. Data from the network, `localStorage`, URL parameters, or any other untyped source must be parsed and validated before being treated as typed. Do not trust a `JSON.parse` result.
 - Use `type` for object shapes rather than `interface`. Reserve `interface` for the cases that need declaration merging or a framework convention that expects it.
+- **String literal unions over `enum`s.** A union of literals narrows properly, needs no import at the use site, and doesn't generate a runtime object. `type Status = "pending" | "active" | "failed"`.
+- **Name booleans with a prefix** — `is`, `has`, `can`, `should`, `will` — or as a plain adjective on a data field (`active`, `visible`). Avoid negative names: `isEnabled` beats `isDisabled`, because `!isDisabled` is one negation too many.
 - Be consistent about which of `null` and `undefined` means "absent", and convert at the boundary rather than letting both flow through the same field. `undefined` is the ecosystem default (`field?: T`, optional props, default parameters); prefer it unless a wire format or a backend makes `null` the natural choice.
 
 ### Errors

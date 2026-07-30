@@ -22,7 +22,9 @@
 - **Newtypes for domain types**: never a bare `String` or `u32` where the domain has a meaning for it.
 - **Parameter structs over long argument lists**: when a function approaches the `clippy::too_many_arguments` threshold, bundle the cohesive parameters into a struct rather than threading more positional arguments. A request struct, or a shared seam like `Engine { store, graph, clock }` that several call shapes pass along.
   - **Never** silence that lint with an `allow`. The lint firing means a struct is wanted. The one exception is a signature you don't own — an FFI shim, or a hook mirroring a foreign ABI — where the `allow` is the honest annotation.
-- More generally, never use `#[allow(clippy::...)]` to silence a lint without a concrete reason documented in a comment above the allow. In almost all cases the right move is to restructure the code.
+- **`#[non_exhaustive]`** on public types in a library crate with a stable API, so a new variant or field isn't a breaking change. Internal crates don't need it.
+- More generally, never silence a lint without a concrete reason documented in a comment above it. In almost all cases the right move is to restructure the code.
+- Prefer `#[expect(...)]` to `#[allow(...)]` when you do suppress one. `expect` warns once the suppression is no longer needed, so stale suppressions can't quietly accumulate as the code changes around them.
 - No `unwrap()` or `expect()` in production code; tests are fine. `unwrap_used` and `expect_used` are allow-by-default restriction lints, so the check commands above request them explicitly — plain `-D warnings` does not catch them.
 
 ### Error handling
@@ -102,8 +104,17 @@ Within each module, organize code as follows:
 ### Serde
 
 - Use `#[serde(deny_unknown_fields)]` on config types, and `#[serde(default)]` on new fields so they stay backwards-compatible.
+- Use `serde_ignored` when deserialising config, so a typo'd or stale field is reported rather than ignored.
 - Avoid `#[serde(untagged)]` when deserialising — the error messages it produces are useless. Write a custom visitor instead.
 - Reserve `#[serde(flatten)]` for the case it is genuinely for: extending a shared struct with local fields, or a `toml::Table` catch-all that preserves unknown fields across a round-trip. Note that it interacts badly with `serde_ignored` and with `deny_unknown_fields`.
+
+### Dependency versions
+
+- **Applications, binaries, and workspace-internal crates: pin exactly.** Cargo's default caret range lets resolution drift between `cargo update` runs; `serde = "=1.0.219"` makes a bump a reviewable change instead of an ambient one.
+- **Crates published to a registry: use the narrowest range that works.** An exact pin in a published library breaks diamond-dependency unification — if two of a consumer's dependencies pin different patch versions of the same crate, they get two copies or a hard resolution failure. Publish a range and let the consumer's lockfile do the pinning.
+- Manage shared versions in the workspace root's `[workspace.dependencies]` and reference them with `{ workspace = true }`.
+- Check the current version before adding or bumping a crate rather than writing one from memory.
+- Comment on a non-obvious dependency choice, including a feature-flag choice made for a reason.
 
 ### Memory and performance
 
