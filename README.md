@@ -14,5 +14,7 @@ These are a starting point, not a standard. Every project that uses them ends up
 
 As per [Coding Agents Are Easy, Actually](https://karashiiro.leaflet.pub/3mbfapvdvss2b), this explicitly targets `CONTRIBUTING.md`, and not `AGENTS.md`; humans need the same kind of documentation!
 
+Some of the conventions here are drawn from [ed3d's house-style skills](https://github.com/ed3dai/ed3d-plugins), which cover similar ground as a set of Claude Code skills. Where they and these templates disagree — `thiserror`, import granularity, `null` versus `undefined` — I've kept my own house style, but the reasoning in theirs is worth reading regardless, and several rules here are better for having been through it.
+
 At the time of writing, these files are a cut-down and edited version of [cargo-nextest's `AGENTS.md`](https://github.com/nextest-rs/nextest/blob/main/AGENTS.md), which was primarily authored by [@sunshowers](https://github.com/sunshowers). 
 I really admire the thoughtful work they've done in putting together `nextest`'s `AGENTS.md`, and I'm equally thankful that it's something that the community as a whole can benefit from! Accordingly, this repository is also licensed MIT and Apache2.
