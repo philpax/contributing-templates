@@ -59,6 +59,7 @@
 - Use `#[cfg(unix)]` and `#[cfg(windows)]` for conditional compilation.
 - **Always** import types or functions at the very top of the module, with the one exception being `cfg()`-gated functions. Never import types or modules within function contexts, other than this `cfg()`-gated exception.
 - It is okay to import enum variants for pattern matching, though.
+- Re-exports follow the same rule: a `pub use` belongs at the top of the module with the imports, not beside the item it re-exports. In a `mod.rs`, the `mod` declarations come first, then the `pub use` block, so the module's public surface reads as one list.
 - A path used more than once in a module gets imported at the top — the specific items, not the module — rather than repeated in full at each call site.
   - A path used once may stay fully-qualified. Unless it's unwieldy, meaning more than three module segments deep, in which case import it anyway.
   - And when the module already imports a sibling from the same parent, import the new item alongside it rather than writing it inline.
