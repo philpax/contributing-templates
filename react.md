@@ -5,7 +5,10 @@
 - Where the React Compiler is enabled, don't add `useMemo`, `useCallback`, or `React.memo` preemptively — prefer plain derivation. Reach for one only when the compiler demonstrably can't handle a case, and say so in a comment.
 - That's also why the hooks lint is load-bearing rather than advisory: the compiler's guarantees hold only while the code stays within the Rules of React.
 - Keep components small and focused. Lift state only as far as it needs to go.
-- Type component props explicitly. Do not rely on inference for the public shape of a component. Props are the one place `interface` is preferred over `type`.
+- Type component props explicitly. Do not rely on inference for the public shape of a component.
+  - Annotate short prop sets inline on the component: `function Badge({ label }: { label: string })`.
+  - When props run long — more than about six properties — extract a named exported type and annotate the component with it: `export type BadgeProps = { … }`.
+  - Extend props via intersection with `&`: `type IconButtonProps = ButtonProps & { icon: Icon }`.
 - Prefer composition over configuration — a few focused components beat one component with a dozen boolean props.
 
 ### File and folder layout
