@@ -7,13 +7,11 @@
 
 ### Linting
 
-Class order, duplicate and conflicting utilities, typo'd class names, and shorthand collapsing are all machine-checkable — so let the linter own them rather than spending review on them. Use [`eslint-plugin-better-tailwindcss`](https://github.com/schoero/eslint-plugin-better-tailwindcss) with its `recommended` config, and include it in the `npm run lint` check. Two things to get right when setting it up:
+Class order, duplicate and conflicting utilities, typo'd class names, and shorthand collapsing are all machine-checkable — so let the tools own them rather than spending review on them.
 
-- It reports stylistic rules as warnings and correctness rules as errors by default. Treat both as errors, so lint stays a binary signal.
-- Point it at the theme, or every custom token you define will be reported as an unknown class: `entryPoint` for a v4 CSS-based config, `tailwindConfig` for v3.
-
-```js
-settings: { "better-tailwindcss": { entryPoint: "src/app.css" } }
-```
+- Let oxfmt own class order: enable `sortTailwindcss` in `.oxfmtrc.json`, which uses the same ordering as `prettier-plugin-tailwindcss`, so `npm run format:check` enforces it.
+- Load [`eslint-plugin-better-tailwindcss`](https://github.com/schoero/eslint-plugin-better-tailwindcss) into oxlint through `jsPlugins` for the checks a formatter can't make — duplicate and conflicting utilities, unknown classes — and include it in the `npm run lint` check. oxlint's JS plugin support is still in alpha and outside semver, so pin the oxlint version.
+- Treat the plugin's stylistic rules as errors as well as its correctness rules, so lint stays a binary signal, and turn off its class-order rule, which oxfmt owns.
+- Point both tools at the theme, or every custom token you define will be reported as an unknown class: the CSS entry point for a v4 CSS-based config, the config file for v3.
 
 Compose conditional classes with `clsx` (plus `tailwind-merge` where later classes must override earlier ones), or `cva` for a component with variants. Never build a class name by interpolating fragments into a string — it defeats both the linter and Tailwind's own class extraction.

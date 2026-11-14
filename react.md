@@ -1,7 +1,7 @@
 ## React
 
 - Write function components and hooks. No class components.
-- Follow the rules of hooks strictly, and keep `eslint-plugin-react-hooks` warnings at zero. Add the plugin's rules to the ESLint config and include them in the `npm run lint` check.
+- Follow the rules of hooks strictly, and keep oxlint's hooks rules at zero. Enable oxlint's `react` plugin with `rules-of-hooks` and `exhaustive-deps` as errors, so the `npm run lint` check enforces them.
 - Where the React Compiler is enabled, don't add `useMemo`, `useCallback`, or `React.memo` preemptively — prefer plain derivation. Reach for one only when the compiler demonstrably can't handle a case, and say so in a comment.
 - That's also why the hooks lint is load-bearing rather than advisory: the compiler's guarantees hold only while the code stays within the Rules of React.
 - Keep components small and focused. Lift state only as far as it needs to go.
