@@ -6,10 +6,11 @@ The same correctness-first mindset applies here as anywhere else: TypeScript's t
 
 - These checks must pass at the end of each complete task, and CI enforces them:
   - `npm run typecheck` — `tsc -b` with no errors.
-  - `npm run lint` — ESLint.
-  - `npm run format:check` — Prettier. `npm run format` writes the fixes.
+  - `npm run lint` — `oxlint --deny-warnings .`, so a warning fails the check and lint stays a binary signal.
+  - `npm run format:check` — `oxfmt --check .`. `npm run format` (`oxfmt --write .`) writes the fixes.
   - `npm run build` — the production build, where the project produces one.
 - Run them frequently during development, not just at the end of a task. A clean lint is cheap to maintain and expensive to recover.
+- Use the oxc toolchain, oxlint and oxfmt, rather than ESLint and Prettier. Configure them in `.oxlintrc.json` and `.oxfmtrc.json`, keep the scripts calling them directly over the whole project, and exclude dependencies and generated output through their ignore patterns rather than through directory allowlists.
 
 ### Compiler settings
 
