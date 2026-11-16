@@ -112,6 +112,7 @@ The general code-organisation rules apply; these are the Rust specifics.
 - Use `serde_ignored` when deserialising config, so a typo'd or stale field is reported rather than ignored.
 - Avoid `#[serde(untagged)]` when deserialising — the error messages it produces are useless. Write a custom visitor instead.
 - Reserve `#[serde(flatten)]` for the case it is genuinely for: extending a shared struct with local fields, or a `toml::Table` catch-all that preserves unknown fields across a round-trip. Note that it interacts badly with `serde_ignored` and with `deny_unknown_fields`.
+- Do not build JSON with `serde_json::json!`. Define a struct or enum that derives `Serialize` (and `Deserialize` where it round-trips) and serialise that. A `json!` literal moves shape errors from compile time to runtime, hides the schema from anyone reading the type, and silently accepts any key or value type you mistype. Reserve `json!` for the cases that genuinely need dynamic typing: an untyped passthrough of arbitrary JSON, a value assembled from keys that aren't known until runtime, or a test fixture asserting on raw wire shape. If the shape is known, it's a struct.
 
 ### Memory and performance
 
